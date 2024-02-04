@@ -14,10 +14,9 @@ public static class SerilogExtensions
     /// </remarks>
     internal static IHostApplicationBuilder ConfigureSerilog(this IHostApplicationBuilder builder)
     {
-        // Removes the built-in logging providers
-        builder.Logging.ClearProviders();
-        
-        // Including the writeToProviders=true parameter allows the OpenTelemetry logger to still be written to
+        var otlpExporter = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
+        var serviceName = builder.Configuration["OTEL_SERVICE_NAME"] ?? "Unknown";
+        Log.Logger.Information("App Service name {Name}", serviceName);
         builder.Services.AddSerilog((_, loggerConfiguration) =>
         {
             // Configure Serilog as desired here for every project (or use IConfiguration for configuration variations between projects)
@@ -25,8 +24,20 @@ public static class SerilogExtensions
                 .ReadFrom.Configuration(builder.Configuration)
                 .Enrich.FromLogContext()
                 .WriteTo.Console();
-        }, writeToProviders: true);
 
+            if (!string.IsNullOrEmpty(otlpExporter))
+            {
+                loggerConfiguration
+                    .WriteTo.OpenTelemetry(options =>
+                    {
+                        options.Endpoint = otlpExporter;
+                        options.ResourceAttributes.Add("service.name", serviceName);
+                    });
+            }
+        });
+
+        // Removes the built-in logging providers
+        builder.Logging.ClearProviders().AddSerilog();
         return builder;
     }
 

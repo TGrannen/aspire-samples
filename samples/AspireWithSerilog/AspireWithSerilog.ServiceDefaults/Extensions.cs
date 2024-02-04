@@ -2,10 +2,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+using Serilog;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -13,6 +13,7 @@ public static class Extensions
 {
     public static IHostApplicationBuilder AddServiceDefaults(this IHostApplicationBuilder builder)
     {
+        Log.Logger.ConfigureSerilogBootstrapLogger();
         builder.ConfigureSerilog();
 
         builder.ConfigureOpenTelemetry();
@@ -35,17 +36,18 @@ public static class Extensions
 
     public static IHostApplicationBuilder ConfigureOpenTelemetry(this IHostApplicationBuilder builder)
     {
-        builder.Logging.AddOpenTelemetry(logging =>
-        {
-            logging.IncludeFormattedMessage = true;
-            logging.IncludeScopes = true;
-        });
+        // OpenTelemetry Sink configured with Serilog
+        // builder.Logging.AddOpenTelemetry(logging =>
+        // {
+        //     logging.IncludeFormattedMessage = true;
+        //     logging.IncludeScopes = true;
+        // });
 
         builder.Services.AddOpenTelemetry()
             .WithMetrics(metrics =>
             {
                 metrics.AddRuntimeInstrumentation()
-                       .AddBuiltInMeters();
+                    .AddBuiltInMeters();
             })
             .WithTracing(tracing =>
             {
@@ -56,8 +58,8 @@ public static class Extensions
                 }
 
                 tracing.AddAspNetCoreInstrumentation()
-                       .AddGrpcClientInstrumentation()
-                       .AddHttpClientInstrumentation();
+                    .AddGrpcClientInstrumentation()
+                    .AddHttpClientInstrumentation();
             });
 
         builder.AddOpenTelemetryExporters();
@@ -105,10 +107,7 @@ public static class Extensions
         app.MapHealthChecks("/health");
 
         // Only health checks tagged with the "live" tag must pass for app to be considered alive
-        app.MapHealthChecks("/alive", new HealthCheckOptions
-        {
-            Predicate = r => r.Tags.Contains("live")
-        });
+        app.MapHealthChecks("/alive", new HealthCheckOptions { Predicate = r => r.Tags.Contains("live") });
 
         return app;
     }

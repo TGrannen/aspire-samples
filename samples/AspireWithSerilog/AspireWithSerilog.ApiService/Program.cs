@@ -1,6 +1,7 @@
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+Log.Logger.ConfigureSerilogBootstrapLogger();
 
 // Add service defaults & Aspire components.
 builder.AddServiceDefaults();
