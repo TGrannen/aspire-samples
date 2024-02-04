@@ -34,7 +34,7 @@ app.MapGet("/weatherforecast", () =>
 });
 
 app.MapDefaultEndpoints();
-app.Map("/", () => "Hello from WebApi"); //Helps avoid un-necessary noice in the logs with 404 for "/"
+app.Map("/", () => "Hello from WebApi"); //Helps avoid un-necessary noise in the logs with 404 for "/"
 
 try
 {
