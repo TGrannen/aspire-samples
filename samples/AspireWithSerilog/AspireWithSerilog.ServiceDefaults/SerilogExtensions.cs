@@ -17,26 +17,24 @@ public static class SerilogExtensions
         var otlpExporter = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
         var serviceName = builder.Configuration["OTEL_SERVICE_NAME"] ?? "Unknown";
         Log.Logger.Information("App Service name {Name}", serviceName);
-        builder.Services.AddSerilog((_, loggerConfiguration) =>
+
+        var loggerConfiguration = new LoggerConfiguration()
+            .ReadFrom.Configuration(builder.Configuration)
+            .Enrich.FromLogContext()
+            .WriteTo.Console();
+
+        if (!string.IsNullOrEmpty(otlpExporter))
         {
-            // Configure Serilog as desired here for every project (or use IConfiguration for configuration variations between projects)
-            loggerConfiguration
-                .ReadFrom.Configuration(builder.Configuration)
-                .Enrich.FromLogContext()
-                .WriteTo.Console();
-
-            if (!string.IsNullOrEmpty(otlpExporter))
+            loggerConfiguration.WriteTo.OpenTelemetry(options =>
             {
-                loggerConfiguration
-                    .WriteTo.OpenTelemetry(options =>
-                    {
-                        options.Endpoint = otlpExporter;
-                        options.ResourceAttributes.Add("service.name", serviceName);
-                    });
-            }
-        });
+                options.Endpoint = otlpExporter;
+                options.ResourceAttributes.Add("service.name", serviceName);
+            });
+        }
 
+        Log.Logger = loggerConfiguration.CreateLogger();
         // Removes the built-in logging providers
+        builder.Services.AddSerilog();
         builder.Logging.ClearProviders().AddSerilog();
         return builder;
     }
