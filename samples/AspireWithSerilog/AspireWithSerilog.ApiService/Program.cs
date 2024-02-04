@@ -1,4 +1,4 @@
-using Serilog;
+﻿using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,8 +34,22 @@ app.MapGet("/weatherforecast", () =>
 });
 
 app.MapDefaultEndpoints();
+app.Map("/", () => "Hello from WebApi"); //Helps avoid un-necessary noice in the logs with 404 for "/"
 
-app.Run();
+try
+{
+    Log.Information("Starting the WebApi!"); // Logs with the boostrap logger
+    app.Run();
+}
+catch (Exception ex)
+{
+    // Logs with the boostrap logger if an exception is thrown during start up
+    Log.Fatal(ex, "WebApi terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {

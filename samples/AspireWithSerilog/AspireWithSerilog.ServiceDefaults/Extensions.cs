@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
+
+using Serilog;
 
 namespace Microsoft.Extensions.Hosting;
 
@@ -29,6 +31,30 @@ public static class Extensions
             // Turn on service discovery by default
             http.UseServiceDiscovery();
         });
+
+        return builder;
+    }
+
+    /// <summary>
+    /// Configure Serilog to write to the console and OpenTelemetry for Aspire structured logs.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ This method MUST be called before the <see cref="OpenTelemetryLoggingExtensions.AddOpenTelemetry(ILoggingBuilder)"/> method to still send structured logs via OpenTelemetry. ⚠
+    /// </remarks>
+    internal static IHostApplicationBuilder ConfigureSerilog(this IHostApplicationBuilder builder)
+    {
+        // Removes the built-in logging providers
+        builder.Logging.ClearProviders();
+
+        // Including the writeToProviders=true parameter allows the OpenTelemetry logger to still be written to
+        builder.Services.AddSerilog((_, loggerConfiguration) =>
+        {
+            // Configure Serilog as desired here for every project (or use IConfiguration for configuration variations between projects)
+            loggerConfiguration
+                .ReadFrom.Configuration(builder.Configuration)
+                .Enrich.FromLogContext()
+                .WriteTo.Console();
+        }, writeToProviders: true);
 
         return builder;
     }
